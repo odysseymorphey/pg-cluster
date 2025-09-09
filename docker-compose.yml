@@ -32,7 +32,7 @@ services:
     environment:
       PATRONI_KUBERNETES_USE_CONFIGMAP: "false"
     volumes:
-      - ./conf/patroni1.yml:/etc/patroni/patroni.yml:ro
+      - ./.conf/patroni1.yml:/etc/patroni/patroni.yml:ro
       - pgdata1:/var/lib/postgresql/data
     ports:
       - "8008:8008"
@@ -46,7 +46,7 @@ services:
     environment:
       PATRONI_KUBERNETES_USE_CONFIGMAP: "false"
     volumes:
-      - ./conf/patroni2.yml:/etc/patroni/patroni.yml:ro
+      - ./.conf/patroni2.yml:/etc/patroni/patroni.yml:ro
       - pgdata2:/var/lib/postgresql/data
     ports:
       - "8009:8008"
@@ -60,7 +60,7 @@ services:
     environment:
       PATRONI_KUBERNETES_USE_CONFIGMAP: "false"
     volumes:
-      - ./conf/patroni3.yml:/etc/patroni/patroni.yml:ro
+      - ./.conf/patroni3.yml:/etc/patroni/patroni.yml:ro
       - pgdata3:/var/lib/postgresql/data
     ports:
       - "8010:8008"
@@ -76,5 +76,5 @@ services:
       - "5001:5001"
       - "8404:8404"
     volumes:
-      - ./conf/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./.conf/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     networks: [pgnet]
