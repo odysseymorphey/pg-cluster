@@ -6,27 +6,40 @@ volumes:
   pgdata1:
   pgdata2:
   pgdata3:
+  consul1_data:
+  consul2_data:
+  consul3_data:
 
 services:
-  etcd:
-    image: quay.io/coreos/etcd:v3.5.15
-    container_name: etcd
-    command:
-      - /usr/local/bin/etcd
-      - --name=etcd0
-      - --data-dir=/etcd-data
-      - --advertise-client-urls=http://0.0.0.0:2379
-      - --listen-client-urls=http://0.0.0.0:2379
-      - --initial-advertise-peer-urls=http://0.0.0.0:2380
-      - --listen-peer-urls=http://0.0.0.0:2380
-      - --initial-cluster=etcd0=http://0.0.0.0:2380
-      - --initial-cluster-state=new
+  consul1:
+    image: hashicorp/consul:1.21.4
+    container_name: consul1
+    command: agent -server -bootstrap-expect=3 -datacenter=dc1 -node=consul1 -bind=0.0.0.0 -client=0.0.0.0 -ui
+    volumes:
+      - consul1_data:/consul/data
     ports:
-      - "2379:2379"
+      - "8500:8500"
+      - "8600:8600/udp"
+    networks: [pgnet]
+
+  consul2:
+    image: hashicorp/consul:1.21.4
+    container_name: consul2
+    command: agent -server -datacenter=dc1 -node=consul2 -bind=0.0.0.0 -client=0.0.0.0 -retry-join=consul1
+    volumes:
+      - consul2_data:/consul/data
+    networks: [pgnet]
+
+  consul3:
+    image: hashicorp/consul:1.21
+    container_name: consul3
+    command: agent -server -datacenter=dc1 -node=consul3 -bind=0.0.0.0 -client=0.0.0.0 -retry-join=consul1
+    volumes:
+      - consul3_data:/consul/data
     networks: [pgnet]
 
   patroni1:
-    image: ghcr.io/zalando/patroni:3.3.2
+    image: ongres/patroni:v4.0.4-pg17.2
     container_name: patroni1
     hostname: patroni1
     environment:
@@ -36,41 +49,67 @@ services:
       - pgdata1:/var/lib/postgresql/data
     ports:
       - "8008:8008"
-    depends_on: [etcd]
+    depends_on:
+      - consul1
+      - consul2
+      - consul3
     networks: [pgnet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   patroni2:
-    image: ghcr.io/zalando/patroni:3.3.2
+    image: ongres/patroni:v4.0.4-pg17.2
     container_name: patroni2
     hostname: patroni2
-    environment:
-      PATRONI_KUBERNETES_USE_CONFIGMAP: "false"
     volumes:
       - ./.conf/patroni2.yml:/etc/patroni/patroni.yml:ro
       - pgdata2:/var/lib/postgresql/data
     ports:
       - "8009:8008"
-    depends_on: [etcd]
+    depends_on:
+      - consul1
+      - consul2
+      - consul3
     networks: [pgnet]
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8008/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   patroni3:
-    image: ghcr.io/zalando/patroni:3.3.2
+    image: ongres/patroni:v4.0.4-pg17.2
     container_name: patroni3
     hostname: patroni3
-    environment:
-      PATRONI_KUBERNETES_USE_CONFIGMAP: "false"
     volumes:
       - ./.conf/patroni3.yml:/etc/patroni/patroni.yml:ro
       - pgdata3:/var/lib/postgresql/data
     ports:
       - "8010:8008"
-    depends_on: [etcd]
+    depends_on:
+      - consul1
+      - consul2
+      - consul3
     networks: [pgnet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   haproxy:
     image: haproxy:2.8
     container_name: haproxy
-    depends_on: [patroni1, patroni2, patroni3]
+    depends_on:
+      - patroni1
+      - patroni2
+      - patroni3
     ports:
       - "5000:5000"
       - "5001:5001"
@@ -78,3 +117,4 @@ services:
     volumes:
       - ./.conf/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     networks: [pgnet]
+    restart: unless-stopped
