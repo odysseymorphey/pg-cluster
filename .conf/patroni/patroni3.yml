@@ -1,0 +1,26 @@
+scope: pgcluster
+name: patroni3
+
+restapi:
+  listen: 0.0.0.0:8008
+  connect_address: patroni3:8008
+
+etcd:
+  host: etcd:2379
+
+postgresql:
+  listen: 0.0.0.0:5432
+  connect_address: patroni3:5432
+  data_dir: /var/lib/postgresql/data/pgdata
+  bin_dir: /usr/lib/postgresql/16/bin
+  authentication:
+    superuser:
+      username: postgres
+      password: supassword
+    replication:
+      username: replication
+      password: replpassword
+  parameters:
+    shared_preload_libraries: "pg_stat_statements"
+  pg_hba:
+    - host all all 0.0.0.0/0 scram-sha-256
