@@ -1,54 +1,38 @@
 scope: pgcluster
+namespace: /service/
 name: patroni1
 
 restapi:
   listen: 0.0.0.0:8008
   connect_address: patroni1:8008
 
-etcd:
-  host: etcd:2379
+consul:
+  host: "consul1:8500,consul2:8500,consul3:8500"
+  scheme: http
 
 bootstrap:
   dcs:
     ttl: 30
     loop_wait: 10
     retry_timeout: 10
-    synchronous_mode: true
-    synchronous_mode_strict: false
-    synchronous_node_count: 1
-    postgresql:
-      use_pg_rewind: true
-      parameters:
-        wal_level: replica
-        hot_standby: "on"
-        max_wal_senders: 20
-        max_replication_slots: 20
-        wal_log_hints: "on"
-        shared_buffers: "1GB"
-        effective_cache_size: "3GB"
-        work_mem: "32MB"
-        max_connections: 300
-        archive_mode: "off"
+    maximum_lag_on_failover: 1048576
   initdb:
     - encoding: UTF8
     - data-checksums
   pg_hba:
-    - host all all 0.0.0.0/0 scram-sha-256
+    - host replication repl 0.0.0.0/0 md5
+    - host all all 0.0.0.0/0 md5
   users:
     replication:
       password: replpassword
       options:
         - replication
-    app:
-      password: apppassword
-      options:
-        - createdb
 
 postgresql:
   listen: 0.0.0.0:5432
   connect_address: patroni1:5432
   data_dir: /var/lib/postgresql/data/pgdata
-  bin_dir: /usr/lib/postgresql/16/bin
+  bin_dir: /usr/lib/postgresql/17/bin
   authentication:
     superuser:
       username: postgres
@@ -57,6 +41,11 @@ postgresql:
       username: replication
       password: replpassword
   parameters:
-    shared_preload_libraries: "pg_stat_statements"
-  pg_hba:
-    - host all all 0.0.0.0/0 scram-sha-256
+    max_connections: 200
+    shared_buffers: 512MB
+    work_mem: 16MB
+    maintenance_work_mem: 128MB
+    wal_level: replica
+    max_wal_senders: 10
+    max_replication_slots: 10
+    hot_standby: "on"
