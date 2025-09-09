@@ -7,7 +7,7 @@ restapi:
   connect_address: patroni2:8008
 
 consul:
-  host: "consul1:8500,consul2:8500,consul3:8500"
+  host: "consul2:8500"
   scheme: http
 
 bootstrap:
@@ -31,8 +31,7 @@ bootstrap:
 postgresql:
   listen: 0.0.0.0:5432
   connect_address: patroni1:5432
-  data_dir: /var/lib/postgresql/data/pgdata
-  bin_dir: /usr/lib/postgresql/17/bin
+  data_dir: /var/lib/postgresql/data
   authentication:
     superuser:
       username: postgres
