@@ -4,11 +4,17 @@ networks:
 
 volumes:
   pgdata1:
+    name: pgdata1
   pgdata2:
+    name: pgdata2
   pgdata3:
+    name: pgdata3
   consul1_data:
+    name: consul1_data
   consul2_data:
+    name: consul2_data
   consul3_data:
+    name: consul3_data
 
 services:
   consul1:
@@ -26,26 +32,31 @@ services:
     image: hashicorp/consul:1.21.4
     container_name: consul2
     command: agent -server -datacenter=dc1 -node=consul2 -bind=0.0.0.0 -client=0.0.0.0 -retry-join=consul1
+    depends_on:
+      - consul1
     volumes:
       - consul2_data:/consul/data
     networks: [pgnet]
 
   consul3:
-    image: hashicorp/consul:1.21
+    image: hashicorp/consul:1.21.4
     container_name: consul3
     command: agent -server -datacenter=dc1 -node=consul3 -bind=0.0.0.0 -client=0.0.0.0 -retry-join=consul1
+    depends_on:
+      - consul1
     volumes:
       - consul3_data:/consul/data
     networks: [pgnet]
 
   patroni1:
-    image: ongres/patroni:v4.0.4-pg17.2
+    image: ongres/patroni:v4.0.4-pg17.2-build-6.39
     container_name: patroni1
     hostname: patroni1
+    command: ["patroni", "/etc/patroni/patroni.yml"]
     environment:
       PATRONI_KUBERNETES_USE_CONFIGMAP: "false"
     volumes:
-      - ./.conf/patroni1.yml:/etc/patroni/patroni.yml:ro
+      - ./.conf/patroni/patroni1.yml:/etc/patroni/patroni.yml:ro
       - pgdata1:/var/lib/postgresql/data
     ports:
       - "8008:8008"
@@ -62,11 +73,12 @@ services:
       retries: 5
 
   patroni2:
-    image: ongres/patroni:v4.0.4-pg17.2
+    image: ongres/patroni:v4.0.4-pg17.2-build-6.39
     container_name: patroni2
     hostname: patroni2
+    command: ["patroni", "/etc/patroni/patroni.yml"]
     volumes:
-      - ./.conf/patroni2.yml:/etc/patroni/patroni.yml:ro
+      - ./.conf/patroni/patroni2.yml:/etc/patroni/patroni.yml:ro
       - pgdata2:/var/lib/postgresql/data
     ports:
       - "8009:8008"
@@ -83,11 +95,12 @@ services:
       retries: 5
 
   patroni3:
-    image: ongres/patroni:v4.0.4-pg17.2
+    image: ongres/patroni:v4.0.4-pg17.2-build-6.39
     container_name: patroni3
     hostname: patroni3
+    command: ["patroni", "/etc/patroni/patroni.yml"]
     volumes:
-      - ./.conf/patroni3.yml:/etc/patroni/patroni.yml:ro
+      - ./.conf/patroni/patroni3.yml:/etc/patroni/patroni.yml:ro
       - pgdata3:/var/lib/postgresql/data
     ports:
       - "8010:8008"
@@ -115,6 +128,6 @@ services:
       - "5001:5001"
       - "8404:8404"
     volumes:
-      - ./.conf/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./.conf/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     networks: [pgnet]
     restart: unless-stopped
